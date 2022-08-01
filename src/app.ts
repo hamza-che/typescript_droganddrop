@@ -1,3 +1,39 @@
+// Project state management class
+class ProjectState {
+  private listeners: any[] = [];
+  private projects: any[] = [];
+  private static instance: ProjectState;
+
+  private constructor() {}
+
+  static getInstance() {
+    if (this.instance) {
+      return this.instance;
+    }
+    this.instance = new ProjectState();
+    return this.instance;
+  }
+
+  addListeners(listenerFn: Function) {
+    this.listeners.push(listenerFn);
+  }
+
+  addProject(title: string, description: string, numOfPeople: number) {
+    const newProject = {
+      id: Math.random().toString(),
+      title,
+      description,
+      people: numOfPeople,
+    };
+    this.projects.push(newProject);
+    for (const listenerFn of this.listeners) {
+      listenerFn([ ...this.projects ]);
+    }
+  }
+}
+
+const projectState = ProjectState.getInstance();
+
 // Validation
 interface Validatable {
   value: string | number;
@@ -66,6 +102,7 @@ class PropjectList {
   templateElement: HTMLTemplateElement;
   hostElement: HTMLDivElement;
   element: HTMLElement;
+  assignedProjects: any;
 
   constructor(private type: "finished" | "active") {
     this.templateElement = document.getElementById(
@@ -80,8 +117,22 @@ class PropjectList {
     this.element = importedNode.firstElementChild as HTMLElement;
     this.element.id = `${this.type}-projects`;
 
+    projectState.addListeners((projects: any[]) => {
+      this.assignedProjects = projects;
+      this.renderProjects();
+    });
+
     this.attach();
     this.renderContent();
+  }
+
+  renderProjects() {
+    const listElement = document.getElementById(`${this.type}-projects-list`)!;
+    for (const project of this.assignedProjects) {
+      const listItem = document.createElement("li");
+      listItem.textContent = project.title;
+      listElement.appendChild(listItem);
+    }
   }
 
   renderContent() {
@@ -179,7 +230,7 @@ class ProjectInput {
 
     if (Array.isArray(userInput)) {
       const [ title, desc, people ] = userInput;
-      console.log(title, desc, people);
+      projectState.addProject(title, desc, people);
       this.clearInputs();
     }
   }
